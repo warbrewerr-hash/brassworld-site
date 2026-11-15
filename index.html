@@ -320,7 +320,7 @@
       </svg>
       Pressure rising
     </span>
-    <span>brassworld.online &middot; MMXXVI</span>
+    <span>brassworld.online &middot; MMXXVII</span>
   </footer>
 </main>
 
@@ -346,18 +346,29 @@
 
   // gear outline centred on 0,0 with tooth 0 pointing along +x
   function gearPath(n, m, spokes, hubR) {
-    var R = m * n / 2, ra = R + m * 0.95, rd = R - m * 1.2, p = TAU / n;
-    var root = 0.29 * p, tip = 0.17 * p, d = '';
+    // involute teeth, 20 degree pressure angle: the real profile, so meshing gears roll on each other
+    var R = m * n / 2, ra = R + m, rd = R - 1.25 * m, p = TAU / n;
+    var alpha = 20 * Math.PI / 180, rb = R * Math.cos(alpha);
+    function inv(a) { return Math.tan(a) - a; }
+    var psiP = 0.47 * Math.PI / n, invP = inv(alpha);          // tooth slightly thinner than half a pitch = backlash
+    function psi(r) { return psiP + invP - inv(Math.acos(Math.min(1, rb / r))); }
+    var r0 = Math.max(rb, rd), N = 7, d = '';
     for (var k = 0; k < n; k++) {
-      var c = k * p;
-      var a = pol(0, 0, rd, c - root), b = pol(0, 0, ra, c - tip),
-          e = pol(0, 0, ra, c + tip), g = pol(0, 0, rd, c + root),
-          h = pol(0, 0, rd, c + p - root);
-      d += (k ? 'L' : 'M') + f(a[0]) + ' ' + f(a[1]) +
-        ' L' + f(b[0]) + ' ' + f(b[1]) +
-        ' A' + f(ra) + ' ' + f(ra) + ' 0 0 1 ' + f(e[0]) + ' ' + f(e[1]) +
-        ' L' + f(g[0]) + ' ' + f(g[1]) +
-        ' A' + f(rd) + ' ' + f(rd) + ' 0 0 1 ' + f(h[0]) + ' ' + f(h[1]) + ' ';
+      var c = k * p, i, q, r;
+      if (rd < rb) { q = pol(0, 0, rd, c - psi(rb)); d += (k ? 'L' : 'M') + f(q[0]) + ' ' + f(q[1]) + ' '; }
+      for (i = 0; i <= N; i++) {
+        r = r0 + (ra - r0) * i / N; q = pol(0, 0, r, c - psi(r));
+        d += ((k || rd < rb || i) ? 'L' : 'M') + f(q[0]) + ' ' + f(q[1]) + ' ';
+      }
+      q = pol(0, 0, ra, c + psi(ra));
+      d += 'A' + f(ra) + ' ' + f(ra) + ' 0 0 1 ' + f(q[0]) + ' ' + f(q[1]) + ' ';
+      for (i = N - 1; i >= 0; i--) {
+        r = r0 + (ra - r0) * i / N; q = pol(0, 0, r, c + psi(r));
+        d += 'L' + f(q[0]) + ' ' + f(q[1]) + ' ';
+      }
+      if (rd < rb) { q = pol(0, 0, rd, c + psi(rb)); d += 'L' + f(q[0]) + ' ' + f(q[1]) + ' '; }
+      q = pol(0, 0, rd, c + p - psi(r0));
+      d += 'A' + f(rd) + ' ' + f(rd) + ' 0 0 1 ' + f(q[0]) + ' ' + f(q[1]) + ' ';
     }
     d += 'Z ';
     // spoke windows
@@ -451,19 +462,31 @@
 
   /* ---- a vertical, double-acting steam engine driving gear C ----
      crankshaft = C's axle. crank -> connecting rod -> crosshead (in guide bars)
-     -> piston rod -> piston in a cut-away cylinder. An eccentric on the same
-     shaft drives a D slide valve that admits steam to each end in turn. */
+     -> piston rod -> piston in a sectioned cylinder. An eccentric on the same
+     shaft works a D slide valve; which port is open is worked out from where
+     the valve actually is, not faked. */
   var cx0 = C.cx, crankR = 36, rodL = 140;
   var bore = 28, wall = 10, coverTop = 556, boreTop = 572, boreBot = 668;
   var pistonOff = 120, pistonH = 16;            // piston top = crosshead pin y + pistonOff
-  var ecc = 10, eccLead = Math.PI / 2 + 0.26;   // eccentric 90deg + lead ahead of the crank
-  var vx = 353, eccRodL = 196.4, valveOff = 82, valveH = 44;
-  var chest = { x0: 334, x1: 384, y0: 578, y1: 662 };
-  var stack = { x: 420, top: 462 };
+  var ecc = 10, eccLead = Math.PI / 2 + 0.26;   // eccentric set 90deg + angle of advance ahead of the crank
+  var cast = { x0: cx0 + bore + wall, x1: 360, y0: boreTop, y1: 698 };   // port casting between cylinder and chest
+  var chest = { x0: 360, x1: 404, y0: 578, y1: 662 };
+  var face = chest.x0 + 6;                      // valve seat (port face)
+  var portTop = [600, 608], portExh = [614, 626], portBot = [632, 640];
+  var valveH = 44, cavIn = 10, valveSeat0 = 598; // valve top when centred: covers both ports (2px lap)
+  var vx = 379, eccRodL = 202.4;
+  var vy0 = C.cy + Math.sqrt(eccRodL * eccRodL - Math.pow(vx - cx0, 2)); // spindle pin y with valve centred
+  var stack = { x: 222, top: 462 };
+  var LIVE = 'rgba(205,92,58,.8)', EXH = 'rgba(92,128,150,.6)';
 
   var pat = el('pattern', { id: 'hatch', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, defsR);
   el('rect', { width: 6, height: 6, fill: '#3a322c' }, pat);
   el('line', { x1: 0, y1: 0, x2: 0, y2: 6, stroke: '#5c5249', 'stroke-width': 2 }, pat);
+
+  function pipe(parent, x, y, w, h, fill) {
+    el('rect', { x: x - 2, y: y - 2, width: w + 4, height: h + 4, fill: '#1a1410' }, parent);
+    el('rect', { x: x, y: y, width: w, height: h, fill: fill }, parent);
+  }
 
   var back = el('g', { filter: 'url(#gshadow)' }, R);
   // engine frame: two columns from the crankshaft bearing to the cylinder cover, a cross-member for the guides
@@ -473,65 +496,56 @@
   });
   el('rect', { x: cx0 - 36, y: 432, width: 72, height: 10, rx: 2, fill: 'url(#irong)', stroke: '#14100c' }, back);
   el('circle', { cx: cx0, cy: C.cy, r: 22, fill: 'url(#irong)', stroke: '#14100c' }, back); // main bearing
-  // guide bars
-  [-1, 1].forEach(function (s) {
+  [-1, 1].forEach(function (s) {   // guide bars
     el('rect', { x: cx0 + s * 19 - 2.5, y: 437, width: 5, height: coverTop - 437, fill: '#9a9188', stroke: '#2a241f', 'stroke-width': 1 }, back);
   });
-  // steam supply from the boiler (off-screen below) into the valve chest
-  el('rect', { x: 357, y: chest.y1, width: 18, height: 140, fill: '#2a1a10' }, back);
-  el('rect', { x: 359.5, y: chest.y1, width: 13, height: 140, fill: 'url(#copperg)' }, back);
-  el('rect', { x: 356, y: 700, width: 20, height: 9, rx: 2, fill: 'url(#brassg)', stroke: '#2b1d12' }, back);
-  // exhaust from the chest out to the stack
-  el('path', { d: 'M' + chest.x1 + ' 620 H ' + (stack.x - 10) + ' Q ' + stack.x + ' 620 ' + stack.x + ' 610 V ' + stack.top, stroke: '#1a1410', 'stroke-width': 16, fill: 'none' }, back);
-  el('path', { d: 'M' + chest.x1 + ' 620 H ' + (stack.x - 10) + ' Q ' + stack.x + ' 620 ' + stack.x + ' 610 V ' + stack.top, stroke: 'url(#irong)', 'stroke-width': 11, fill: 'none' }, back);
-  el('rect', { x: stack.x - 9, y: stack.top - 6, width: 18, height: 8, rx: 2, fill: 'url(#irong)', stroke: '#14100c' }, back);
+  // steam supply: from the boiler (off-screen) into the side of the valve chest
+  pipe(back, chest.x1, 590, 26, 13, 'url(#copperg)');
+  pipe(back, 417, 590, 13, 220, 'url(#copperg)');
+  el('rect', { x: 412, y: 700, width: 23, height: 8, rx: 2, fill: 'url(#brassg)', stroke: '#2b1d12' }, back);
+  // exhaust: out of the bottom of the port casting, under the cylinder, up the stack
+  pipe(back, cast.x1 - 15, cast.y1, 11, 12, 'url(#irong)');
+  pipe(back, stack.x - 6, 702, cast.x1 - 4 - (stack.x - 6), 11, 'url(#irong)');
+  pipe(back, stack.x - 6, stack.top, 12, 713 - stack.top, 'url(#irong)');
+  el('rect', { x: stack.x - 10, y: stack.top - 7, width: 20, height: 8, rx: 2, fill: 'url(#irong)', stroke: '#14100c' }, back);
 
-  // cylinder body in section: hatched walls, open bore
+  // cylinder, port casting and chest drawn in section
   var cylG = el('g', {}, R);
   el('rect', { x: cx0 - bore - wall, y: boreTop - 2, width: (bore + wall) * 2, height: boreBot - boreTop + 4, fill: 'url(#hatch)', stroke: '#14100c', 'stroke-width': 1.5 }, cylG);
+  el('rect', { x: cast.x0 - 1, y: cast.y0 - 2, width: cast.x1 - cast.x0 + 1, height: cast.y1 - cast.y0 + 2, fill: 'url(#hatch)', stroke: '#14100c', 'stroke-width': 1.5 }, cylG);
   el('rect', { x: cx0 - bore, y: boreTop, width: bore * 2, height: boreBot - boreTop, fill: '#120d09' }, cylG);
   var topSteam = el('rect', { x: cx0 - bore, y: boreTop, width: bore * 2, height: 0 }, cylG);
   var botSteam = el('rect', { x: cx0 - bore, width: bore * 2, height: 0 }, cylG);
-  // valve chest in section
   el('rect', { x: chest.x0, y: chest.y0, width: chest.x1 - chest.x0, height: chest.y1 - chest.y0, fill: 'url(#hatch)', stroke: '#14100c', 'stroke-width': 1.5 }, cylG);
-  el('rect', { x: chest.x0 + 6, y: chest.y0 + 6, width: chest.x1 - chest.x0 - 12, height: chest.y1 - chest.y0 - 12, fill: 'rgba(205,92,58,.78)' }, cylG); // live steam fills the chest
-  // steam passages: top port, exhaust port, bottom port
-  var portTop = [600, 608], portExh = [614, 626], portBot = [632, 640];
-  var passTop = el('path', { d: 'M' + (chest.x0 + 6) + ' ' + (portTop[0] + 4) + ' H ' + (cx0 + bore + 4) + ' V ' + (boreTop + 4) + ' H ' + (cx0 + bore - 1), fill: 'none', stroke: '#120d09', 'stroke-width': 8 }, cylG);
-  var passBot = el('path', { d: 'M' + (chest.x0 + 6) + ' ' + (portBot[0] + 4) + ' H ' + (cx0 + bore + 4) + ' V ' + (boreBot - 4) + ' H ' + (cx0 + bore - 1), fill: 'none', stroke: '#120d09', 'stroke-width': 8 }, cylG);
-  el('path', { d: 'M' + (chest.x0 + 6) + ' 620 H ' + chest.x0, stroke: '#120d09', 'stroke-width': 12, fill: 'none' }, cylG);
-  el('rect', { x: chest.x0, y: 611, width: 4, height: 18, fill: '#120d09' }, cylG);
-  el('path', { d: 'M' + chest.x0 + ' 620 h -6', stroke: '#120d09', 'stroke-width': 1 }, cylG);
-  // the exhaust port leaves through the back of the chest to the exhaust pipe
-  el('rect', { x: chest.x0 + 6, y: portExh[0], width: 3, height: portExh[1] - portExh[0], fill: '#120d09' }, cylG);
-
+  el('rect', { x: face, y: chest.y0 + 6, width: chest.x1 - 6 - face, height: chest.y1 - chest.y0 - 12, fill: LIVE }, cylG); // chest is always full of live steam
+  // passages cut through the casting: top port -> top of bore, bottom port -> bottom of bore, exhaust -> pipe
+  var pw = 6, chanX = cast.x0 + 7, exhX = cast.x0 + 18;
+  var passTop = el('path', { d: 'M' + face + ' ' + (portTop[0] + 4) + ' H ' + chanX + ' V ' + (boreTop + 4) + ' H ' + (cx0 + bore - 1), fill: 'none', 'stroke-width': pw }, cylG);
+  var passBot = el('path', { d: 'M' + face + ' ' + (portBot[0] + 4) + ' H ' + chanX + ' V ' + (boreBot - 4) + ' H ' + (cx0 + bore - 1), fill: 'none', 'stroke-width': pw }, cylG);
+  el('path', { d: 'M' + face + ' 620 H ' + exhX + ' V ' + (cast.y1 + 2), fill: 'none', stroke: EXH, 'stroke-width': 8 }, cylG);
+  [passTop, passBot].forEach(function (r) { r.style.transition = 'stroke .45s ease'; });
   [topSteam, botSteam].forEach(function (r) { r.style.transition = 'fill .45s ease'; });
-  [passTop, passBot].forEach(function (r) { r.style.transition = 'stroke .45s ease'; r.setAttribute('stroke-width', 6); });
-
-  // key
-  var key = el('g', { 'font-family': '"IM Fell English SC", Georgia, serif', 'font-size': 13, fill: '#cbb994', 'letter-spacing': '.06em' }, R);
-  el('rect', { x: 230, y: 700, width: 14, height: 10, rx: 2, fill: 'rgba(205,92,58,.85)', stroke: '#14100c' }, key);
-  el('text', { x: 250, y: 709 }, key).textContent = 'live steam';
-  el('rect', { x: 230, y: 718, width: 14, height: 10, rx: 2, fill: 'rgba(92,128,150,.7)', stroke: '#14100c' }, key);
-  el('text', { x: 250, y: 727 }, key).textContent = 'exhaust';
 
   // moving parts inside the cylinder & chest
   var pistonRod = el('rect', { x: cx0 - 3.5, width: 7, fill: '#cfc6b8', stroke: '#6d665e', 'stroke-width': .8 }, R);
   var piston = el('g', {}, R);
   el('rect', { x: cx0 - bore + 1, y: 0, width: bore * 2 - 2, height: pistonH, rx: 1.5, fill: 'url(#brassg)', stroke: '#2b1d12', 'stroke-width': 1 }, piston);
-  el('line', { x1: cx0 - bore + 1, y1: 4.5, x2: cx0 + bore - 1, y2: 4.5, stroke: '#5e3f12', 'stroke-width': 1 }, piston);
+  el('line', { x1: cx0 - bore + 1, y1: 4.5, x2: cx0 + bore - 1, y2: 4.5, stroke: '#5e3f12', 'stroke-width': 1 }, piston);   // rings
   el('line', { x1: cx0 - bore + 1, y1: 11.5, x2: cx0 + bore - 1, y2: 11.5, stroke: '#5e3f12', 'stroke-width': 1 }, piston);
   var valveSpindle = el('rect', { x: vx - 2.5, width: 5, fill: '#cfc6b8', stroke: '#6d665e', 'stroke-width': .8 }, R);
   var valveBlock = el('g', {}, R);
-  el('path', { d: 'M' + (chest.x0 + 6) + ' 0 H ' + (chest.x0 + 32) + ' V ' + valveH + ' H ' + (chest.x0 + 6) + ' V ' + (valveH - 10) + ' H ' + (chest.x0 + 14) + ' V 10 H ' + (chest.x0 + 6) + ' Z', fill: 'url(#brassg)', stroke: '#2b1d12', 'stroke-width': 1 }, valveBlock);
+  // D valve: solid faces cover the ports; the hollow (the "D") links one port to the exhaust
+  el('path', { d: 'M' + face + ' 0 H ' + (face + 26) + ' V ' + valveH + ' H ' + face + ' V ' + (valveH - cavIn) + ' H ' + (face + 9) + ' V ' + cavIn + ' H ' + face + ' Z', fill: 'url(#brassg)', stroke: '#2b1d12', 'stroke-width': 1 }, valveBlock);
+  var valveCav = el('rect', { x: face, y: cavIn, width: 9, height: valveH - 2 * cavIn, fill: EXH }, valveBlock);
+  valveCav.style.transition = 'fill .3s';
 
-  // covers, glands and stuffing boxes sit over the rods
+  // covers, glands, bolts
   el('rect', { x: cx0 - bore - wall - 4, y: coverTop, width: (bore + wall) * 2 + 8, height: boreTop - coverTop, rx: 2, fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1.2 }, R);
   el('rect', { x: cx0 - 9, y: coverTop - 12, width: 18, height: 12, rx: 2, fill: 'url(#brassg)', stroke: '#2b1d12' }, R);  // piston-rod gland
   el('rect', { x: cx0 - bore - wall - 4, y: boreBot, width: (bore + wall) * 2 + 8, height: 14, rx: 2, fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1.2 }, R);
   el('rect', { x: chest.x0 - 2, y: chest.y0 - 6, width: chest.x1 - chest.x0 + 4, height: 8, rx: 2, fill: 'url(#irong)', stroke: '#14100c' }, R);
   el('rect', { x: vx - 6, y: chest.y0 - 14, width: 12, height: 9, rx: 2, fill: 'url(#brassg)', stroke: '#2b1d12' }, R);   // valve-spindle gland
-  el('rect', { x: vx - 5, y: 548, width: 10, height: 5, fill: '#9a9188', stroke: '#2a241f' }, R);                             // spindle guide
+  el('rect', { x: vx - 5, y: vy0 + 10, width: 10, height: 5, fill: '#9a9188', stroke: '#2a241f' }, R);                        // spindle guide
   for (var bb = 0; bb < 4; bb++) {
     el('circle', { cx: cx0 - bore - wall + 2 + bb * ((bore + wall) * 2 - 4) / 3, cy: (coverTop + boreTop) / 2, r: 2.4, fill: '#8a7f74', stroke: '#14100c', 'stroke-width': .8 }, R);
   }
@@ -560,11 +574,47 @@
 
   var crosshead = el('g', {}, R);
   el('rect', { x: cx0 - 16.5, y: -11, width: 33, height: 22, rx: 2, fill: 'url(#brassg)', stroke: '#2b1d12', 'stroke-width': 1.2 }, crosshead);
-  el('rect', { x: cx0 - 16.5, y: -11, width: 4, height: 22, fill: '#8a6020' }, crosshead);
+  el('rect', { x: cx0 - 16.5, y: -11, width: 4, height: 22, fill: '#8a6020' }, crosshead);   // slippers
   el('rect', { x: cx0 + 12.5, y: -11, width: 4, height: 22, fill: '#8a6020' }, crosshead);
-  el('circle', { cx: cx0, cy: 0, r: 3.5, fill: '#2b1d12' }, crosshead); // gudgeon pin
+  el('circle', { cx: cx0, cy: 0, r: 3.5, fill: '#2b1d12' }, crosshead);                     // gudgeon pin
   [A, B, C].forEach(function (g) { axleCap(R, g); });
   var puffLayer = el('g', {}, R);
+
+  // key, part labels (toggle), and the hint
+  var ui = el('g', { 'font-family': '"IM Fell English SC", Georgia, serif', 'font-size': 13, fill: '#cbb994', 'letter-spacing': '.06em' }, R);
+  el('rect', { x: 150, y: 724, width: 14, height: 10, rx: 2, fill: LIVE, stroke: '#14100c' }, ui);
+  el('text', { x: 170, y: 733 }, ui).textContent = 'live steam';
+  el('rect', { x: 250, y: 724, width: 14, height: 10, rx: 2, fill: EXH, stroke: '#14100c' }, ui);
+  el('text', { x: 270, y: 733 }, ui).textContent = 'exhaust';
+  var tog = el('text', { x: 150, y: 754, 'text-decoration': 'underline', style: 'cursor:pointer; pointer-events:auto' }, ui);
+  tog.textContent = 'name the parts';
+  tog.setAttribute('tabindex', '0'); tog.setAttribute('role', 'button');
+  var hint = el('text', { x: 120, y: 782, 'font-family': 'Caveat, cursive', 'font-size': 18, 'letter-spacing': '0', fill: '#d9c9a3', transform: 'rotate(-2 120 782)' }, R);
+  hint.textContent = 'yes, the game will be quietly educational';
+
+  var labels = el('g', { 'font-family': '"IM Fell English", Georgia, serif', 'font-size': 12, fill: '#efe2c2', opacity: 0, style: 'transition: opacity .4s' }, R);
+  [ // [name, anchor x, anchor y, label x, label y, side]
+    ['crank', C.cx + 26, C.cy - 30, 150, 300, 'L'], ['crankshaft', C.cx, C.cy, 150, 330, 'L'],
+    ['eccentric', cx0 - 8, C.cy + 20, 150, 362, 'L'], ['connecting rod', cx0 - 6, 405, 150, 400, 'L'],
+    ['eccentric rod', 337, 446, 150, 436, 'L'], ['crosshead', cx0 - 14, 492, 150, 470, 'L'],
+    ['guide bars', cx0 - 19, 520, 150, 505, 'L'], ['gland', cx0 - 9, coverTop - 6, 150, 540, 'L'],
+    ['piston rod', cx0, 586, 150, 578, 'L'], ['piston', cx0 - 20, 620, 150, 616, 'L'],
+    ['cylinder', cx0 - bore - 6, 650, 150, 652, 'L'], ['exhaust to stack', stack.x, 600, 150, 686, 'L'],
+    ['slide valve', face + 20, 640, 384, 680, 'B'], ['valve chest', chest.x1 - 3, 655, 384, 694, 'B'],
+    ['steam from boiler', 423, 735, 410, 760, 'E']
+  ].forEach(function (L) {
+    var side = L[5], tx = L[3], ty = L[4], lx, ly, anchor;
+    if (side === 'L') { lx = tx + 4; ly = ty - 4; anchor = 'end'; }
+    else if (side === 'B') { lx = tx; ly = ty - 10; anchor = 'middle'; }
+    else { lx = tx - 6; ly = ty - 12; anchor = 'end'; }
+    el('line', { x1: L[1], y1: L[2], x2: lx, y2: ly, stroke: '#cbb994', 'stroke-width': .8 }, labels);
+    el('circle', { cx: L[1], cy: L[2], r: 2, fill: '#efe2c2' }, labels);
+    el('text', { x: tx, y: ty, 'text-anchor': anchor, 'font-size': side === 'L' ? 12 : 11, 'paint-order': 'stroke', stroke: '#1d140c', 'stroke-width': 3 }, labels).textContent = L[0];
+  });
+  var shown = false;
+  function toggleLabels() { shown = !shown; labels.setAttribute('opacity', shown ? 1 : 0); tog.textContent = shown ? 'hide the names' : 'name the parts'; }
+  tog.addEventListener('click', toggleLabels);
+  tog.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleLabels(); } });
 
   /* ---------------- left-hand machine ---------------- */
   var L = document.getElementById('machineL');
@@ -579,15 +629,16 @@
 
   /* ---------------- running it ---------------- */
   var period = 4;                           // seconds per crank revolution
-  var w = TAU / period, phase0 = -Math.PI / 2, lastSign = 0;
+  var w = TAU / period, phase0 = -Math.PI / 2;
+  var topState = 'exh', botState = 'live';
 
   var blur = el('filter', { id: 'steamblur', x: '-100%', y: '-100%', width: '300%', height: '300%' }, defsR);
   el('feGaussianBlur', { stdDeviation: 2.2 }, blur);
   puffLayer.setAttribute('filter', 'url(#steamblur)');
   function puff() {
-    // a short exhaust beat: a few soft blobs that leave the stack fast, then slow, swell and fade
+    // an exhaust beat: a few soft blobs leave the stack fast, then slow, swell and fade
     for (var i = 0; i < 4; i++) (function (i) {
-      var c = el('circle', { cx: stack.x + (Math.random() - .5) * 4, cy: stack.top - 6, r: 3.5 + Math.random() * 2, fill: '#f2ece0', opacity: 0 }, puffLayer);
+      var c = el('circle', { cx: stack.x + (Math.random() - .5) * 4, cy: stack.top - 8, r: 3.5 + Math.random() * 2, fill: '#f2ece0', opacity: 0 }, puffLayer);
       if (!c.animate) { c.remove(); return; }
       c.style.transformBox = 'fill-box'; c.style.transformOrigin = 'center';
       var dx = -6 - Math.random() * 26, dy = -38 - Math.random() * 34 - i * 6;
@@ -598,8 +649,6 @@
       ], { duration: 1800 + Math.random() * 900, delay: i * 70, easing: 'cubic-bezier(.1,.7,.35,1)', fill: 'backwards' }).onfinish = function () { c.remove(); };
     })(i);
   }
-
-  var LIVE = 'rgba(205,92,58,.78)', EXH = 'rgba(92,128,150,.55)';
 
   function frame(t) {
     var sec = (t || 0) / 1000;
@@ -613,11 +662,9 @@
     var cp = pol(C.cx, C.cy, crankR, th);
     var xh = cp[1] + Math.sqrt(rodL * rodL - Math.pow(cp[0] - cx0, 2));
     crank.setAttribute('transform', 'translate(' + f(C.cx) + ' ' + f(C.cy) + ') rotate(' + f(th * 360 / TAU) + ')');
-    var rodAng = Math.atan2(xh - cp[1], cx0 - cp[0]);
-    conrod.setAttribute('transform', 'translate(' + f(cp[0]) + ' ' + f(cp[1]) + ') rotate(' + f(rodAng * 360 / TAU) + ')');
+    conrod.setAttribute('transform', 'translate(' + f(cp[0]) + ' ' + f(cp[1]) + ') rotate(' + f(Math.atan2(xh - cp[1], cx0 - cp[0]) * 360 / TAU) + ')');
     crosshead.setAttribute('transform', 'translate(0 ' + f(xh) + ')');
 
-    // piston and rod
     var pTop = xh + pistonOff;
     piston.setAttribute('transform', 'translate(0 ' + f(pTop) + ')');
     pistonRod.setAttribute('y', f(xh)); pistonRod.setAttribute('height', f(pTop - xh));
@@ -627,25 +674,26 @@
     eccG.setAttribute('transform', 'translate(' + f(ec[0]) + ' ' + f(ec[1]) + ')');
     var vy = ec[1] + Math.sqrt(eccRodL * eccRodL - Math.pow(vx - ec[0], 2));
     eccRod.setAttribute('transform', 'translate(' + f(ec[0]) + ' ' + f(ec[1]) + ') rotate(' + f(Math.atan2(vy - ec[1], vx - ec[0]) * 360 / TAU) + ')');
-    var vTop = vy + valveOff - valveH / 2 - 22;
+    var vTop = valveSeat0 + (vy - vy0);
     valveBlock.setAttribute('transform', 'translate(0 ' + f(vTop) + ')');
     valveSpindle.setAttribute('y', f(vy)); valveSpindle.setAttribute('height', f(vTop - vy));
 
-    // which end has live steam: valve below centre uncovers the top port to the chest
-    var d = Math.sin(th + eccLead);
-    var topLive = d > 0;
+    // what each port is connected to, read straight off the valve's position
+    var vBot = vTop + valveH, cTop = vTop + cavIn, cBot = vTop + valveH - cavIn;
+    var topToSteam = vTop > portTop[0], topToExh = cTop < portTop[1];
+    var botToSteam = vBot < portBot[1], botToExh = cBot > portBot[0];
+    var wasT = topState, wasB = botState;
+    if (topToSteam) topState = 'live'; else if (topToExh) topState = 'exh';   // port closed: what's inside stays (expansion / compression)
+    if (botToSteam) botState = 'live'; else if (botToExh) botState = 'exh';
+    if (!reduce && ((wasT !== 'exh' && topState === 'exh') || (wasB !== 'exh' && botState === 'exh'))) puff();
+
     topSteam.setAttribute('height', f(Math.max(0, pTop - boreTop)));
-    topSteam.style.fill = topLive ? LIVE : EXH;
     botSteam.setAttribute('y', f(pTop + pistonH));
     botSteam.setAttribute('height', f(Math.max(0, boreBot - pTop - pistonH)));
-    botSteam.style.fill = topLive ? EXH : LIVE;
-    passTop.style.stroke = topLive ? LIVE : EXH;
-    passBot.style.stroke = topLive ? EXH : LIVE;
-
-    // double-acting: one exhaust beat each time the valve changes over (twice a revolution)
-    var sgn = d > 0 ? 1 : -1;
-    if (!reduce && lastSign && sgn !== lastSign) puff();
-    lastSign = sgn;
+    topSteam.style.fill = topState === 'live' ? LIVE : EXH;
+    botSteam.style.fill = botState === 'live' ? LIVE : EXH;
+    passTop.style.stroke = topState === 'live' ? LIVE : EXH;
+    passBot.style.stroke = botState === 'live' ? LIVE : EXH;
     if (!reduce) requestAnimationFrame(frame);
   }
   frame(0);
