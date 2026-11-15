@@ -445,9 +445,11 @@
       }
     }
   }
-  function axleCap(svg, g) {
-    el('circle', { cx: f(g.cx), cy: f(g.cy), r: 7, fill: 'url(#brassg)', stroke: '#2b1d12', 'stroke-width': 1.2 }, svg);
-    el('circle', { cx: f(g.cx - 1.5), cy: f(g.cy - 1.5), r: 2, fill: 'rgba(255,240,200,.6)' }, svg);
+  function axleCap(svg, g, part) {
+    var t = part ? { 'data-part': part } : {};
+    var a = el('circle', { cx: f(g.cx), cy: f(g.cy), r: 7, fill: 'url(#brassg)', stroke: '#2b1d12', 'stroke-width': 1.2 }, svg);
+    var b = el('circle', { cx: f(g.cx - 1.5), cy: f(g.cy - 1.5), r: 2, fill: 'rgba(255,240,200,.6)' }, svg);
+    if (part) { a.setAttribute('data-part', part); b.setAttribute('data-part', part); }
   }
 
   /* ---------------- right-hand machine ---------------- */
@@ -483,9 +485,10 @@
   el('rect', { width: 6, height: 6, fill: '#3a322c' }, pat);
   el('line', { x1: 0, y1: 0, x2: 0, y2: 6, stroke: '#5c5249', 'stroke-width': 2 }, pat);
 
-  function pipe(parent, x, y, w, h, fill) {
-    el('rect', { x: x - 2, y: y - 2, width: w + 4, height: h + 4, fill: '#1a1410' }, parent);
-    el('rect', { x: x, y: y, width: w, height: h, fill: fill }, parent);
+  function pipe(parent, x, y, w, h, fill, part) {
+    var a = el('rect', { x: x - 2, y: y - 2, width: w + 4, height: h + 4, fill: '#1a1410' }, parent);
+    var b = el('rect', { x: x, y: y, width: w, height: h, fill: fill }, parent);
+    if (part) { a.setAttribute('data-part', part); b.setAttribute('data-part', part); }
   }
 
   var back = el('g', { filter: 'url(#gshadow)' }, R);
@@ -497,26 +500,26 @@
   el('rect', { x: cx0 - 36, y: 432, width: 72, height: 10, rx: 2, fill: 'url(#irong)', stroke: '#14100c' }, back);
   el('circle', { cx: cx0, cy: C.cy, r: 22, fill: 'url(#irong)', stroke: '#14100c' }, back); // main bearing
   [-1, 1].forEach(function (s) {   // guide bars
-    el('rect', { x: cx0 + s * 19 - 2.5, y: 437, width: 5, height: coverTop - 437, fill: '#9a9188', stroke: '#2a241f', 'stroke-width': 1 }, back);
+    el('rect', { x: cx0 + s * 19 - 2.5, y: 437, width: 5, height: coverTop - 437, fill: '#9a9188', stroke: '#2a241f', 'stroke-width': 1, 'data-part': 'guide bars' }, back);
   });
   // steam supply: from the boiler (off-screen) into the side of the valve chest
   pipe(back, chest.x1, 590, 26, 13, 'url(#copperg)');
-  pipe(back, 417, 590, 13, 220, 'url(#copperg)');
+  pipe(back, 417, 590, 13, 220, 'url(#copperg)', 'steam from boiler');
   el('rect', { x: 412, y: 700, width: 23, height: 8, rx: 2, fill: 'url(#brassg)', stroke: '#2b1d12' }, back);
   // exhaust: out of the bottom of the port casting, under the cylinder, up the stack
   pipe(back, cast.x1 - 15, cast.y1, 11, 12, 'url(#irong)');
   pipe(back, stack.x - 6, 702, cast.x1 - 4 - (stack.x - 6), 11, 'url(#irong)');
-  pipe(back, stack.x - 6, stack.top, 12, 713 - stack.top, 'url(#irong)');
+  pipe(back, stack.x - 6, stack.top, 12, 713 - stack.top, 'url(#irong)', 'exhaust pipe');
   el('rect', { x: stack.x - 10, y: stack.top - 7, width: 20, height: 8, rx: 2, fill: 'url(#irong)', stroke: '#14100c' }, back);
 
   // cylinder, port casting and chest drawn in section
   var cylG = el('g', {}, R);
-  el('rect', { x: cx0 - bore - wall, y: boreTop - 2, width: (bore + wall) * 2, height: boreBot - boreTop + 4, fill: 'url(#hatch)', stroke: '#14100c', 'stroke-width': 1.5 }, cylG);
+  el('rect', { x: cx0 - bore - wall, y: boreTop - 2, width: (bore + wall) * 2, height: boreBot - boreTop + 4, fill: 'url(#hatch)', stroke: '#14100c', 'stroke-width': 1.5, 'data-part': 'cylinder' }, cylG);
   el('rect', { x: cast.x0 - 1, y: cast.y0 - 2, width: cast.x1 - cast.x0 + 1, height: cast.y1 - cast.y0 + 2, fill: 'url(#hatch)', stroke: '#14100c', 'stroke-width': 1.5 }, cylG);
   el('rect', { x: cx0 - bore, y: boreTop, width: bore * 2, height: boreBot - boreTop, fill: '#120d09' }, cylG);
   var topSteam = el('rect', { x: cx0 - bore, y: boreTop, width: bore * 2, height: 0 }, cylG);
   var botSteam = el('rect', { x: cx0 - bore, width: bore * 2, height: 0 }, cylG);
-  el('rect', { x: chest.x0, y: chest.y0, width: chest.x1 - chest.x0, height: chest.y1 - chest.y0, fill: 'url(#hatch)', stroke: '#14100c', 'stroke-width': 1.5 }, cylG);
+  el('rect', { x: chest.x0, y: chest.y0, width: chest.x1 - chest.x0, height: chest.y1 - chest.y0, fill: 'url(#hatch)', stroke: '#14100c', 'stroke-width': 1.5, 'data-part': 'valve chest' }, cylG);
   el('rect', { x: face, y: chest.y0 + 6, width: chest.x1 - 6 - face, height: chest.y1 - chest.y0 - 12, fill: LIVE }, cylG); // chest is always full of live steam
   // passages cut through the casting: top port -> top of bore, bottom port -> bottom of bore, exhaust -> pipe
   var pw = 6, chanX = cast.x0 + 7, exhX = cast.x0 + 18;
@@ -527,13 +530,13 @@
   [topSteam, botSteam].forEach(function (r) { r.style.transition = 'fill .45s ease'; });
 
   // moving parts inside the cylinder & chest
-  var pistonRod = el('rect', { x: cx0 - 3.5, width: 7, fill: '#cfc6b8', stroke: '#6d665e', 'stroke-width': .8 }, R);
-  var piston = el('g', {}, R);
+  var pistonRod = el('rect', { x: cx0 - 3.5, width: 7, fill: '#cfc6b8', stroke: '#6d665e', 'stroke-width': .8, 'data-part': 'piston rod' }, R);
+  var piston = el('g', { 'data-part': 'piston' }, R);
   el('rect', { x: cx0 - bore + 1, y: 0, width: bore * 2 - 2, height: pistonH, rx: 1.5, fill: 'url(#brassg)', stroke: '#2b1d12', 'stroke-width': 1 }, piston);
   el('line', { x1: cx0 - bore + 1, y1: 4.5, x2: cx0 + bore - 1, y2: 4.5, stroke: '#5e3f12', 'stroke-width': 1 }, piston);   // rings
   el('line', { x1: cx0 - bore + 1, y1: 11.5, x2: cx0 + bore - 1, y2: 11.5, stroke: '#5e3f12', 'stroke-width': 1 }, piston);
   var valveSpindle = el('rect', { x: vx - 2.5, width: 5, fill: '#cfc6b8', stroke: '#6d665e', 'stroke-width': .8 }, R);
-  var valveBlock = el('g', {}, R);
+  var valveBlock = el('g', { 'data-part': 'slide valve' }, R);
   // D valve: solid faces cover the ports; the hollow (the "D") links one port to the exhaust
   el('path', { d: 'M' + face + ' 0 H ' + (face + 26) + ' V ' + valveH + ' H ' + face + ' V ' + (valveH - cavIn) + ' H ' + (face + 9) + ' V ' + cavIn + ' H ' + face + ' Z', fill: 'url(#brassg)', stroke: '#2b1d12', 'stroke-width': 1 }, valveBlock);
   var valveCav = el('rect', { x: face, y: cavIn, width: 9, height: valveH - 2 * cavIn, fill: EXH }, valveBlock);
@@ -541,7 +544,7 @@
 
   // covers, glands, bolts
   el('rect', { x: cx0 - bore - wall - 4, y: coverTop, width: (bore + wall) * 2 + 8, height: boreTop - coverTop, rx: 2, fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1.2 }, R);
-  el('rect', { x: cx0 - 9, y: coverTop - 12, width: 18, height: 12, rx: 2, fill: 'url(#brassg)', stroke: '#2b1d12' }, R);  // piston-rod gland
+  el('rect', { x: cx0 - 9, y: coverTop - 12, width: 18, height: 12, rx: 2, fill: 'url(#brassg)', stroke: '#2b1d12', 'data-part': 'gland' }, R);  // piston-rod gland
   el('rect', { x: cx0 - bore - wall - 4, y: boreBot, width: (bore + wall) * 2 + 8, height: 14, rx: 2, fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1.2 }, R);
   el('rect', { x: chest.x0 - 2, y: chest.y0 - 6, width: chest.x1 - chest.x0 + 4, height: 8, rx: 2, fill: 'url(#irong)', stroke: '#14100c' }, R);
   el('rect', { x: vx - 6, y: chest.y0 - 14, width: 12, height: 9, rx: 2, fill: 'url(#brassg)', stroke: '#2b1d12' }, R);   // valve-spindle gland
@@ -554,30 +557,30 @@
   [A, B, C].forEach(function (g) { makeGear(R, defsR, g); });
 
   // on the crankshaft, in front of gear C: eccentric sheave + strap, then the crank
-  var eccG = el('g', {}, R);
-  el('circle', { cx: 0, cy: 0, r: 17, fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1.2 }, eccG);
-  el('circle', { cx: 0, cy: 0, r: 21, fill: 'none', stroke: 'url(#brassg)', 'stroke-width': 4 }, eccG);
-  var eccRod = el('g', {}, R);
+  var eccG = el('g', { 'data-part': 'eccentric' }, R);
+  el('circle', { cx: 0, cy: 0, r: 25, fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1.2 }, eccG);   // sheave
+  el('circle', { cx: 0, cy: 0, r: 29, fill: 'none', stroke: 'url(#brassg)', 'stroke-width': 5 }, eccG);        // strap
+  var eccRod = el('g', { 'data-part': 'eccentric rod' }, R);
   el('path', { d: 'M 0 -3 L ' + eccRodL + ' -2 L ' + eccRodL + ' 2 L 0 3 Z', fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': .8 }, eccRod);
   el('circle', { cx: eccRodL, cy: 0, r: 4, fill: '#d9b46a', stroke: '#2b1d12' }, eccRod);
 
-  var crank = el('g', {}, R);
+  var crank = el('g', { 'data-part': 'crank' }, R);
   el('path', { d: 'M -14 -24 A 28 28 0 0 0 -14 24 L 0 12 L 0 -12 Z', fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1 }, crank); // counterweight
   el('rect', { x: -12, y: -11, width: crankR + 23, height: 22, rx: 11, fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1.2 }, crank);
   el('circle', { cx: 0, cy: 0, r: 8, fill: 'url(#brassg)', stroke: '#2b1d12' }, crank);
 
-  var conrod = el('g', {}, R);
+  var conrod = el('g', { 'data-part': 'connecting rod' }, R);
   el('path', { d: 'M 0 -6 L ' + rodL + ' -3.5 L ' + rodL + ' 3.5 L 0 6 Z', fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1 }, conrod);
   el('circle', { cx: 0, cy: 0, r: 11, fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1.2 }, conrod);   // big end
   el('circle', { cx: 0, cy: 0, r: 5, fill: '#d9b46a', stroke: '#2b1d12' }, conrod);                             // crank pin
   el('circle', { cx: rodL, cy: 0, r: 7.5, fill: 'url(#irong)', stroke: '#14100c', 'stroke-width': 1.2 }, conrod); // small end
 
-  var crosshead = el('g', {}, R);
+  var crosshead = el('g', { 'data-part': 'crosshead' }, R);
   el('rect', { x: cx0 - 16.5, y: -11, width: 33, height: 22, rx: 2, fill: 'url(#brassg)', stroke: '#2b1d12', 'stroke-width': 1.2 }, crosshead);
   el('rect', { x: cx0 - 16.5, y: -11, width: 4, height: 22, fill: '#8a6020' }, crosshead);   // slippers
   el('rect', { x: cx0 + 12.5, y: -11, width: 4, height: 22, fill: '#8a6020' }, crosshead);
   el('circle', { cx: cx0, cy: 0, r: 3.5, fill: '#2b1d12' }, crosshead);                     // gudgeon pin
-  [A, B, C].forEach(function (g) { axleCap(R, g); });
+  axleCap(R, A); axleCap(R, B); axleCap(R, C, 'crankshaft');
   var puffLayer = el('g', {}, R);
 
   // key, part labels (toggle), and the hint
@@ -593,26 +596,76 @@
   hint.textContent = 'yes, the game will be quietly educational';
 
   var labels = el('g', { 'font-family': '"IM Fell English", Georgia, serif', 'font-size': 12, fill: '#efe2c2', opacity: 0, style: 'transition: opacity .4s' }, R);
-  [ // [name, anchor x, anchor y, label x, label y, side]
-    ['crank', C.cx + 26, C.cy - 30, 182, 300, 'L'], ['crankshaft', C.cx, C.cy, 182, 330, 'L'],
-    ['eccentric', cx0 - 8, C.cy + 20, 182, 362, 'L'], ['connecting rod', cx0 - 6, 405, 182, 400, 'L'],
-    ['eccentric rod', 337, 446, 182, 436, 'L'], ['crosshead', cx0 - 14, 492, 182, 470, 'L'],
-    ['guide bars', cx0 - 19, 520, 182, 505, 'L'], ['gland', cx0 - 9, coverTop - 6, 182, 540, 'L'],
-    ['piston rod', cx0, 586, 182, 578, 'L'], ['piston', cx0 - 20, 620, 182, 616, 'L'],
-    ['cylinder', cx0 - bore - 6, 650, 182, 652, 'L'], ['exhaust', stack.x, 600, 182, 686, 'L'],
-    ['slide valve', face + 20, 640, 384, 680, 'B'], ['valve chest', chest.x1 - 3, 655, 384, 694, 'B'],
-    ['steam from boiler', 423, 735, 410, 760, 'E']
-  ].forEach(function (L) {
-    var side = L[5], tx = L[3], ty = L[4], lx, ly, anchor;
+  // live positions, refreshed every frame, so each pointer sits on its part
+  var S = { th: 0, ec: [0, 0], xh: 0, pTop: 0, vy: 0, vTop: 0, cp: [0, 0] };
+  function along(p0, p1, t) { return [p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t]; }
+  function segDist(q, a, b) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], t = ((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / (dx * dx + dy * dy);
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(q[0] - a[0] - t * dx, q[1] - a[1] - t * dy);
+  }
+  // is this point hidden behind the parts drawn in front of the eccentric / crank?
+  function underConrod(q) { return segDist(q, S.cp, [cx0, S.xh]) < 10 || Math.hypot(q[0] - S.cp[0], q[1] - S.cp[1]) < 15; }
+  function underCrank(q) {
+    var dx = q[0] - C.cx, dy = q[1] - C.cy, c = Math.cos(-S.th), s_ = Math.sin(-S.th);
+    var x = dx * c - dy * s_, y = dx * s_ + dy * c, r = Math.hypot(x, y);
+    if (x >= -14 && x <= crankR + 13 && Math.abs(y) <= 13) return true;               // web + hub
+    if (x <= 1 && r <= 30 && Math.abs(y) <= Math.min(26, 14 - x * 12 / 14)) return true; // counterweight
+    return false;
+  }
+  function underEccRod(q) { return segDist(q, S.ec, [vx, S.vy]) < 7; }
+  function firstClear(cands, hidden) {
+    for (var i = 0; i < cands.length; i++) if (!hidden(cands[i])) return cands[i];
+    return cands[0];
+  }
+  var partLabels = [ // [name, label x, label y, side, where the part is right now]
+    ['crank', 182, 300, 'L', function () {             // a spot on the web or counterweight the connecting rod isn't over
+      return firstClear([[20, 0], [-11, 17], [-11, -17], [-20, 0], [6, 8], [6, -8]].map(function (l) {
+        var c = Math.cos(S.th), s_ = Math.sin(S.th);
+        return [C.cx + l[0] * c - l[1] * s_, C.cy + l[0] * s_ + l[1] * c];
+      }), underConrod);
+    }],
+    ['crankshaft', 182, 330, 'L', function () { return [C.cx, C.cy]; }],
+    ['eccentric', 182, 362, 'L', function () {         // a spot on its strap that the crank and rods aren't covering
+      var cands = [];
+      for (var k = 0; k < 24; k++) cands.push(pol(S.ec[0], S.ec[1], 29, S.th + Math.PI / 2 + k * TAU / 24));
+      return firstClear(cands, function (q) { return underCrank(q) || underConrod(q) || underEccRod(q); });
+    }],
+    ['connecting rod', 182, 400, 'L', function () { return along(S.cp, [cx0, S.xh], 0.55); }],
+    ['eccentric rod', 182, 436, 'L', function () { return along(S.ec, [vx, S.vy], 0.62); }],
+    ['crosshead', 182, 470, 'L', function () { return [cx0 - 9, S.xh]; }],
+    ['guide bars', 182, 505, 'L', function () { return [cx0 - 19, 548]; }],
+    ['gland', 182, 540, 'L', function () { return [cx0 - 6, coverTop - 6]; }],
+    ['piston rod', 182, 578, 'L', function () {                       // whichever stretch of rod is showing more
+      var outA = S.xh + 11, outB = coverTop - 12, inA = boreTop, inB = S.pTop;
+      return (outB - outA) >= (inB - inA) ? [cx0, (outA + outB) / 2] : [cx0, (inA + inB) / 2];
+    }],
+    ['piston', 182, 616, 'L', function () { return [cx0 - 14, S.pTop + 8]; }],
+    ['cylinder', 182, 652, 'L', function () { return [cx0 - bore - 5, 640]; }],
+    ['exhaust pipe', 182, 686, 'L', function () { return [stack.x, 600]; }],
+    ['slide valve', 384, 680, 'B', function () { return [face + 18, S.vTop + 22]; }],
+    ['valve chest', 384, 694, 'B', function () { return [chest.x1 - 3, 645]; }],
+    ['steam from boiler', 410, 760, 'E', function () { return [423, 735]; }]
+  ].map(function (L) {
+    var side = L[3], tx = L[1], ty = L[2], lx, ly, anchor;
     if (side === 'L') { lx = tx + 4; ly = ty - 4; anchor = 'end'; }
     else if (side === 'B') { lx = tx; ly = ty - 10; anchor = 'middle'; }
     else { lx = tx - 6; ly = ty - 12; anchor = 'end'; }
-    el('line', { x1: L[1], y1: L[2], x2: lx, y2: ly, stroke: '#cbb994', 'stroke-width': .8 }, labels);
-    el('circle', { cx: L[1], cy: L[2], r: 2, fill: '#efe2c2' }, labels);
+    var line = el('line', { x1: lx, y1: ly, x2: lx, y2: ly, stroke: '#cbb994', 'stroke-width': .8 }, labels);
+    var dot = el('circle', { r: 2, fill: '#efe2c2', stroke: '#1d140c', 'stroke-width': .6 }, labels);
     el('text', { x: tx, y: ty, 'text-anchor': anchor, 'font-size': side === 'L' ? 12 : 11, 'paint-order': 'stroke', stroke: '#1d140c', 'stroke-width': 3 }, labels).textContent = L[0];
+    return { name: L[0], at: L[4], line: line, dot: dot };
   });
+  function updateLabels() {
+    partLabels.forEach(function (P) {
+      var q = P.at();
+      P.line.setAttribute('x2', f(q[0])); P.line.setAttribute('y2', f(q[1]));
+      P.dot.setAttribute('cx', f(q[0])); P.dot.setAttribute('cy', f(q[1]));
+    });
+  }
+  window.__brassLabels = partLabels;   // lets anyone check each pointer against the drawing
   var shown = false;
-  function toggleLabels() { shown = !shown; labels.setAttribute('opacity', shown ? 1 : 0); tog.textContent = shown ? 'hide the names' : 'name the parts'; }
+  function toggleLabels() { shown = !shown; if (shown) updateLabels(); labels.setAttribute('opacity', shown ? 1 : 0); tog.textContent = shown ? 'hide the names' : 'name the parts'; }
   tog.addEventListener('click', toggleLabels);
   tog.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleLabels(); } });
 
@@ -677,6 +730,8 @@
     var vTop = valveSeat0 + (vy - vy0);
     valveBlock.setAttribute('transform', 'translate(0 ' + f(vTop) + ')');
     valveSpindle.setAttribute('y', f(vy)); valveSpindle.setAttribute('height', f(vTop - vy));
+    S.th = th; S.cp = cp; S.xh = xh; S.pTop = pTop; S.ec = ec; S.vy = vy; S.vTop = vTop;
+    if (shown || !S.ready) { updateLabels(); S.ready = true; }
 
     // what each port is connected to, read straight off the valve's position
     var vBot = vTop + valveH, cTop = vTop + cavIn, cBot = vTop + valveH - cavIn;
