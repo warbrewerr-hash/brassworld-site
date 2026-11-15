@@ -571,17 +571,22 @@
   var period = 4;                           // seconds per crank revolution
   var w = TAU / period, phase0 = -Math.PI / 2, lastSign = 0;
 
+  var blur = el('filter', { id: 'steamblur', x: '-100%', y: '-100%', width: '300%', height: '300%' }, defsR);
+  el('feGaussianBlur', { stdDeviation: 2.2 }, blur);
+  puffLayer.setAttribute('filter', 'url(#steamblur)');
   function puff() {
-    var c = el('circle', { cx: stack.x, cy: stack.top - 8, r: 5, fill: '#efe6d6', opacity: 0 }, puffLayer);
-    var dx = -10 - Math.random() * 28, dy = -45 - Math.random() * 30;
-    if (c.animate) {
+    // a short exhaust beat: a few soft blobs that leave the stack fast, then slow, swell and fade
+    for (var i = 0; i < 4; i++) (function (i) {
+      var c = el('circle', { cx: stack.x + (Math.random() - .5) * 4, cy: stack.top - 6, r: 3.5 + Math.random() * 2, fill: '#f2ece0', opacity: 0 }, puffLayer);
+      if (!c.animate) { c.remove(); return; }
       c.style.transformBox = 'fill-box'; c.style.transformOrigin = 'center';
+      var dx = -6 - Math.random() * 26, dy = -38 - Math.random() * 34 - i * 6;
       c.animate([
-        { transform: 'translate(0px,0px) scale(1)', opacity: .6 },
-        { transform: 'translate(' + dx * .35 + 'px,' + dy * .4 + 'px) scale(2.6)', opacity: .35, offset: .3 },
-        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(5)', opacity: 0 }
-      ], { duration: 2200, easing: 'cubic-bezier(.15,.7,.4,1)' }).onfinish = function () { c.remove(); };
-    } else { c.remove(); }
+        { transform: 'translate(0px,0px) scale(1)', opacity: .7 },
+        { transform: 'translate(' + dx * .3 + 'px,' + dy * .45 + 'px) scale(2.4)', opacity: .45, offset: .25 },
+        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + (4 + Math.random() * 2) + ')', opacity: 0 }
+      ], { duration: 1800 + Math.random() * 900, delay: i * 70, easing: 'cubic-bezier(.1,.7,.35,1)', fill: 'backwards' }).onfinish = function () { c.remove(); };
+    })(i);
   }
 
   var LIVE = 'rgba(236,224,200,.45)', EXH = 'rgba(140,130,118,.16)';
