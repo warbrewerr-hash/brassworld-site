@@ -423,6 +423,8 @@ function bootMachine() {
   var TAU = Math.PI * 2;
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   // phones / small CPUs: skip the blur shadows and cap the frame rate (same machine, same motion)
+  // narrow screens: no steam engine (it's hidden behind the paper anyway), just the gears poking in at the edges
+  var SMALL = window.matchMedia && window.matchMedia('(max-width: 620px)').matches;
   var LITE = (window.matchMedia && window.matchMedia('(max-width: 620px), (pointer: coarse)').matches) || (navigator.hardwareConcurrency || 8) <= 4;
 
   function el(tag, attrs, parent) {
@@ -558,6 +560,7 @@ function bootMachine() {
      -> piston rod -> piston in a sectioned cylinder. An eccentric on the same
      shaft works a D slide valve; which port is open is worked out from where
      the valve actually is, not faked. */
+  if (!SMALL) {
   var cx0 = C.cx, crankR = 36, rodL = 140;
   var bore = 28, wall = 10, coverTop = 556, boreTop = 572, boreBot = 668;
   var pistonOff = 120, pistonH = 16;            // piston top = crosshead pin y + pistonOff
@@ -760,6 +763,12 @@ function bootMachine() {
   tog.addEventListener('click', toggleLabels);
   tog.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleLabels(); } });
 
+  } else {
+    strap(R, [[C.cx, C.cy], [B.cx, B.cy], [A.cx, A.cy]], 22);
+    [A, B, C].forEach(function (g) { makeGear(R, defsR, g); });
+    axleCap(R, A); axleCap(R, B); axleCap(R, C);
+  }
+
   /* ---------------- left-hand machine ---------------- */
   var L = document.getElementById('machineL');
   var defsL = el('defs', {}, L);
@@ -776,9 +785,11 @@ function bootMachine() {
   var w = TAU / period, phase0 = -Math.PI / 2;
   var topState = 'exh', botState = 'live';
 
-  var blur = el('filter', { id: 'steamblur', x: '-100%', y: '-100%', width: '300%', height: '300%' }, defsR);
-  el('feGaussianBlur', { stdDeviation: 2.2 }, blur);
-  puffLayer.setAttribute('filter', 'url(#steamblur)');
+  if (!SMALL) {
+    var blur = el('filter', { id: 'steamblur', x: '-100%', y: '-100%', width: '300%', height: '300%' }, defsR);
+    el('feGaussianBlur', { stdDeviation: 2.2 }, blur);
+    puffLayer.setAttribute('filter', 'url(#steamblur)');
+  }
   function puff() {
     // an exhaust beat: a few soft blobs leave the stack fast, then slow, swell and fade
     for (var i = 0; i < 4; i++) (function (i) {
@@ -803,6 +814,7 @@ function bootMachine() {
     follow(B); follow(A);
     E.theta = -w * 0.8 * sec; follow(D);
     [A, B, C, D, E].forEach(place);
+    if (SMALL) { if (!reduce) requestAnimationFrame(frame); return; }
 
     var th = C.theta;
     // crank, connecting rod, crosshead (pin constrained to the cylinder centre line)
