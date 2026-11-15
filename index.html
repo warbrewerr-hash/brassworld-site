@@ -494,7 +494,7 @@
   var botSteam = el('rect', { x: cx0 - bore, width: bore * 2, height: 0 }, cylG);
   // valve chest in section
   el('rect', { x: chest.x0, y: chest.y0, width: chest.x1 - chest.x0, height: chest.y1 - chest.y0, fill: 'url(#hatch)', stroke: '#14100c', 'stroke-width': 1.5 }, cylG);
-  el('rect', { x: chest.x0 + 6, y: chest.y0 + 6, width: chest.x1 - chest.x0 - 12, height: chest.y1 - chest.y0 - 12, fill: 'rgba(236,224,200,.32)' }, cylG); // live steam fills the chest
+  el('rect', { x: chest.x0 + 6, y: chest.y0 + 6, width: chest.x1 - chest.x0 - 12, height: chest.y1 - chest.y0 - 12, fill: 'rgba(205,92,58,.78)' }, cylG); // live steam fills the chest
   // steam passages: top port, exhaust port, bottom port
   var portTop = [600, 608], portExh = [614, 626], portBot = [632, 640];
   var passTop = el('path', { d: 'M' + (chest.x0 + 6) + ' ' + (portTop[0] + 4) + ' H ' + (cx0 + bore + 4) + ' V ' + (boreTop + 4) + ' H ' + (cx0 + bore - 1), fill: 'none', stroke: '#120d09', 'stroke-width': 8 }, cylG);
@@ -504,6 +504,16 @@
   el('path', { d: 'M' + chest.x0 + ' 620 h -6', stroke: '#120d09', 'stroke-width': 1 }, cylG);
   // the exhaust port leaves through the back of the chest to the exhaust pipe
   el('rect', { x: chest.x0 + 6, y: portExh[0], width: 3, height: portExh[1] - portExh[0], fill: '#120d09' }, cylG);
+
+  [topSteam, botSteam].forEach(function (r) { r.style.transition = 'fill .45s ease'; });
+  [passTop, passBot].forEach(function (r) { r.style.transition = 'stroke .45s ease'; r.setAttribute('stroke-width', 6); });
+
+  // key
+  var key = el('g', { 'font-family': '"IM Fell English SC", Georgia, serif', 'font-size': 13, fill: '#cbb994', 'letter-spacing': '.06em' }, R);
+  el('rect', { x: 230, y: 700, width: 14, height: 10, rx: 2, fill: 'rgba(205,92,58,.85)', stroke: '#14100c' }, key);
+  el('text', { x: 250, y: 709 }, key).textContent = 'live steam';
+  el('rect', { x: 230, y: 718, width: 14, height: 10, rx: 2, fill: 'rgba(92,128,150,.7)', stroke: '#14100c' }, key);
+  el('text', { x: 250, y: 727 }, key).textContent = 'exhaust';
 
   // moving parts inside the cylinder & chest
   var pistonRod = el('rect', { x: cx0 - 3.5, width: 7, fill: '#cfc6b8', stroke: '#6d665e', 'stroke-width': .8 }, R);
@@ -589,7 +599,7 @@
     })(i);
   }
 
-  var LIVE = 'rgba(236,224,200,.45)', EXH = 'rgba(140,130,118,.16)';
+  var LIVE = 'rgba(205,92,58,.78)', EXH = 'rgba(92,128,150,.55)';
 
   function frame(t) {
     var sec = (t || 0) / 1000;
@@ -625,12 +635,12 @@
     var d = Math.sin(th + eccLead);
     var topLive = d > 0;
     topSteam.setAttribute('height', f(Math.max(0, pTop - boreTop)));
-    topSteam.setAttribute('fill', topLive ? LIVE : EXH);
+    topSteam.style.fill = topLive ? LIVE : EXH;
     botSteam.setAttribute('y', f(pTop + pistonH));
     botSteam.setAttribute('height', f(Math.max(0, boreBot - pTop - pistonH)));
-    botSteam.setAttribute('fill', topLive ? EXH : LIVE);
-    passTop.setAttribute('stroke', topLive ? '#8f877a' : '#2a241f');
-    passBot.setAttribute('stroke', topLive ? '#2a241f' : '#8f877a');
+    botSteam.style.fill = topLive ? EXH : LIVE;
+    passTop.style.stroke = topLive ? LIVE : EXH;
+    passBot.style.stroke = topLive ? EXH : LIVE;
 
     // double-acting: one exhaust beat each time the valve changes over (twice a revolution)
     var sgn = d > 0 ? 1 : -1;
